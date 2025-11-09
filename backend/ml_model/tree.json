@@ -1,0 +1,52 @@
+{
+  "options": {
+    "gainFunction": "gini",
+    "splitFunction": "mean",
+    "minNumSamples": 3,
+    "maxDepth": null,
+    "gainThreshold": 0.01,
+    "kind": "classifier"
+  },
+  "root": {
+    "kind": "classifier",
+    "gainFunction": "gini",
+    "splitFunction": "mean",
+    "minNumSamples": 3,
+    "maxDepth": null,
+    "gainThreshold": 0.01,
+    "splitValue": 625,
+    "splitColumn": 0,
+    "gain": 0.47999999999999987,
+    "numberSamples": 10,
+    "left": {
+      "kind": "classifier",
+      "gainFunction": "gini",
+      "splitFunction": "mean",
+      "minNumSamples": 3,
+      "maxDepth": null,
+      "gainThreshold": 0.01,
+      "gain": null,
+      "distribution": [
+        [
+          1
+        ]
+      ]
+    },
+    "right": {
+      "kind": "classifier",
+      "gainFunction": "gini",
+      "splitFunction": "mean",
+      "minNumSamples": 3,
+      "maxDepth": null,
+      "gainThreshold": 0.01,
+      "gain": null,
+      "distribution": [
+        [
+          0,
+          0.9999999999999999
+        ]
+      ]
+    }
+  },
+  "name": "DTClassifier"
+}

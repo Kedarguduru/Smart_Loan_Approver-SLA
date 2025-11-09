@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Loan Approval Predictor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root {
+            --bg:#0f172a; --panel:#111827; --muted:#6b7280;
+            --ok:#10b981; --err:#ef4444; --accent:#6366f1;
+        }
+        * { box-sizing:border-box; }
+        body {
+            margin:0; background:linear-gradient(135deg,#0b1020,#141a2d);
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu;
+            color:#e5e7eb; min-height:100vh; display:grid; place-items:center; padding:24px;
+        }
+        .card {
+            width:100%; max-width:520px; background:rgba(17,24,39,.8);
+            border:1px solid rgba(99,102,241,.18); border-radius:16px; padding:22px;
+            box-shadow: 0 20px 40px rgba(0,0,0,.35); backdrop-filter:blur(8px);
+        }
+        h1 { margin:0 0 6px; font-size:22px; letter-spacing:.2px; }
+        p.sub { margin:0 0 18px; color:#9ca3af; font-size:14px; }
+
+        label { display:block; font-size:13px; margin:12px 0 6px; color:#cbd5e1; }
+        input {
+            width:100%; padding:12px 14px; border-radius:10px; border:1px solid #334155;
+            background:#0b1220; color:#e5e7eb; outline:none;
+        }
+        input:focus { border-color:#818cf8; box-shadow:0 0 0 3px rgba(99,102,241,.15); }
+
+        .row { display:grid; gap:12px; grid-template-columns:1fr 1fr; }
+        .btns { display:flex; gap:10px; margin-top:16px; }
+        button {
+            flex:1; padding:12px 14px; border:0; border-radius:10px; cursor:pointer;
+            background:linear-gradient(135deg,#4f46e5,#6366f1); color:white; font-weight:600;
+        }
+        button.secondary {
+            background:#0b1220; border:1px solid #334155; color:#e5e7eb;
+        }
+
+        .result-box {
+            margin-top:18px; padding:16px; border-radius:14px;
+            background:#0b1220; border:1px solid #334155; display:none;
+            animation: fadeUp .45s ease forwards; opacity:0;
+        }
+        @keyframes fadeUp {
+            from { opacity:0; transform: translateY(8px); }
+            to { opacity:1; transform: translateY(0); }
+        }
+        .status-ok { color:var(--ok); font-weight:700; }
+        .status-err { color:var(--err); font-weight:700; }
+        .meta { margin-top:10px; color:#a1a1aa; font-size:12px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Loan Approval Predictor</h1>
+    <p class="sub">Based on Credit Score, Income, and Loan Amount.</p>
+
+    <div class="row">
+        <div>
+            <label>Credit Score</label>
+            <input type="number" id="Credit_Score" placeholder="e.g. 720" />
+        </div>
+        <div>
+            <label>Income</label>
+            <input type="number" id="Income" placeholder="e.g. 55000" />
+        </div>
+    </div>
+
+    <label>Loan Amount</label>
+    <input type="number" id="Loan_Amount(s)" placeholder="e.g. 20000" />
+
+    <div class="btns">
+        <button id="predictBtn">Predict Approval</button>
+        <button class="secondary" id="trainBtn">Train Model</button>
+    </div>
+
+    <div id="result" class="result-box"></div>
+    <div class="meta" id="meta"></div>
+</div>
+
+<script>
+    const api = "http://localhost:3000";
+
+    function explainReason(cs, inc, loan) {
+        if (cs < 600) return "Low credit score reduces approval chances.";
+        if (inc < loan * 1.5) return "Income may not support requested loan amount.";
+        if (cs > 700 && inc > loan * 2) return "Strong credit score and income support approval.";
+        return "Financial profile moderately supports decision.";
+    }
+
+    async function train() {
+        setResult("Training model… Please wait.");
+        const r = await fetch(api + "/train", { method: "POST" });
+        const j = await r.json();
+        if (!j.ok) return setResult("❌ " + j.error, true);
+        setResult(`✅ Model trained successfully. Samples used: ${j.samples_used}`);
+    }
+
+    async function predict() {
+        const cs = Number(document.getElementById("Credit_Score").value);
+        const inc = Number(document.getElementById("Income").value);
+        const loan = Number(document.getElementById("Loan_Amount(s)").value);
+
+        if ([cs, inc, loan].some(v => !v)) {
+            return setResult("❌ Please enter all values.", true);
+        }
+
+        const r = await fetch(api + "/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ record: { "Credit_Score": cs, "Income": inc, "Loan_Amount(s)": loan } })
+        });
+        const j = await r.json();
+
+        if (!j.ok) return setResult("❌ " + j.error, true);
+
+        const approved = j.label === 1;
+        const probability = j?.probability_approved ? (j.probability_approved * 100).toFixed(2) : "N/A";
+
+        const reason = explainReason(cs, inc, loan);
+
+        setResult(
+            `📊 Loan Decision Result\n` +
+            `Status: ${approved ? "✅ Approved" : "❌ Rejected"}\n` +
+            `Probability: ${probability}%\n` +
+            `Reasoning: ${reason}`
+            , !approved);
+    }
+
+    function setResult(text, isError = false) {
+        const box = document.getElementById("result");
+        box.style.display = "block";
+        box.classList.remove("status-ok","status-err");
+        box.classList.add(isError ? "status-err" : "status-ok");
+        box.innerText = text;
+    }
+
+    document.getElementById("predictBtn").addEventListener("click", predict);
+    document.getElementById("trainBtn").addEventListener("click", train);
+</script>
+
+</body>
+</html>

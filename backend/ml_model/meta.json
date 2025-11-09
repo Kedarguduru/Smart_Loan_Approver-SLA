@@ -1,0 +1,10 @@
+{
+  "FEATURES": [
+    "Credit_Score",
+    "Income",
+    "Loan_Amount(s)"
+  ],
+  "TARGET": "Loan_Approved",
+  "samplesUsed": 10,
+  "skipped": 0
+}

@@ -1,0 +1,11 @@
+﻿Applicant ID,Credit_Score,Income,Loan_Amount(s),Employement_Status,Marital_Status,Loan_Approved
+A001,720,55000,20000,Employed,Married,Yes
+A002,680,42000,15000,Self-Employed,Single,Yes
+A003,590,35000,25000,UnEmployed,Married,No
+A004,640,45000,10000,Employed,Single,Yes
+A005,610,30000,20000,Employed,Divorced,No
+A006,700,60000,22000,Self-Employed,Married,Yes
+A007,580,25000,18000,UnEmployed,Single,No
+A008,690,52000,17000,Employed,Married,Yes
+A009,650,41000,16000,Employed,Single,Yes
+A010,600,33000,21000,UnEmployed,Divorced,No
