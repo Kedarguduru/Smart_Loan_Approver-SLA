@@ -98,12 +98,12 @@ app.post("/train", async (_req, res) => {
 });
 
 // Predict with a trained model
-// Body: { "record": { "Credit_Score": 720, "Income": 55000, "Loan_Amount(s)": 20000 } }
 app.post("/predict", async (req, res) => {
     try {
         if (!fs.existsSync(MODEL_FILE) || !fs.existsSync(META_FILE)) {
             return res.status(400).json({ ok: false, error: "Model not trained. Run POST /train first." });
         }
+
         const treeJSON = JSON.parse(fs.readFileSync(MODEL_FILE, "utf-8"));
         const meta = JSON.parse(fs.readFileSync(META_FILE, "utf-8"));
         const clf = DecisionTreeClassifier.load(treeJSON);
@@ -117,19 +117,92 @@ app.post("/predict", async (req, res) => {
             });
         }
 
-        const pred = clf.predict([vec])[0]; // 0 or 1
+        // Extract values
+        const [creditScore, income, loanAmount] = vec;
+
+        // Base model prediction
+        const modelPrediction = clf.predict([vec])[0]; // 0 or 1
+
+        // Default outputs
+        let finalStatus = "Approved ✅";
+        let label = 1;
+        let reasoning = "Model prediction and financial ratios indicate acceptable risk.";
+        let probability = "N/A";
+
+        // -----------------------------
+        // 🌟 General Loan Approval Logic
+        // -----------------------------
+
+        // 🟥 Invalid / Not Possible scenarios
+        if (income <= 0) {
+            finalStatus = "🚫 Not Possible";
+            label = -1;
+            reasoning = "Income must be greater than zero for loan consideration.";
+        } else if (loanAmount <= 0) {
+            finalStatus = "🚫 Not Possible";
+            label = -1;
+            reasoning = "Invalid loan amount — must be greater than zero.";
+        } else if (creditScore < 400) {
+            finalStatus = "🚫 Not Possible";
+            label = -1;
+            reasoning = "Extremely low credit score — loan cannot be processed.";
+        }
+
+        // 🟧 Rejection scenarios
+        else if (creditScore < 600) {
+            finalStatus = "❌ Rejected";
+            label = 0;
+            reasoning = "Low credit score reduces approval chances.";
+        } else if (loanAmount > income * 8) {
+            finalStatus = "❌ Rejected";
+            label = 0;
+            reasoning = "Income may not support the requested loan amount.";
+        } else if (loanAmount > income * 6 && creditScore < 650) {
+            finalStatus = "❌ Rejected";
+            label = 0;
+            reasoning = "High loan amount and moderate credit score make approval unlikely.";
+        } else if (modelPrediction === 0) {
+            finalStatus = "❌ Rejected";
+            label = 0;
+            reasoning = "Model prediction indicates a high risk of default.";
+        }
+
+        // 🟩 Approval scenarios
+        else if (creditScore >= 700 && loanAmount <= income * 5) {
+            finalStatus = "✅ Approved";
+            label = 1;
+            reasoning = "Good credit score and reasonable loan amount — approval granted.";
+        } else if (creditScore >= 650 && loanAmount <= income * 6) {
+            finalStatus = "✅ Approved";
+            label = 1;
+            reasoning = "Acceptable credit score and manageable loan ratio.";
+        } else {
+            // borderline: default to model’s suggestion
+            finalStatus = modelPrediction === 1 ? "✅ Approved" : "❌ Rejected";
+            reasoning =
+                modelPrediction === 1
+                    ? "Model prediction supports approval based on learned patterns."
+                    : "Model prediction suggests rejection based on historical data.";
+        }
+
+        // Final structured response
         res.json({
             ok: true,
             features_used: meta.FEATURES,
-            input_vector: vec,
-            prediction: pred === 1 ? "Approved ✅" : "Rejected ❌",
-            label: pred,
+            input_vector: { Credit_Score: creditScore, Income: income, Loan_Amount: loanAmount },
+            prediction: finalStatus,
+            label,
+            probability,
+            reasoning
         });
     } catch (err) {
         console.error(err);
         res.status(500).json({ ok: false, error: err.message });
     }
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 API running at http://localhost:${PORT}`));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 API running at http://localhost:${PORT}`));
